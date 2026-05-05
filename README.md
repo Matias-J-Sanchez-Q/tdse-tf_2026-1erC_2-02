@@ -7,3 +7,5 @@
 | 02 | Propuesta.md | | Semana 11 |
 | 03 | Informe_de_Avance.md | | Semana 14 |
 | 04 | Memoria_Video_Código.md | | Semana 17 |
+
+
