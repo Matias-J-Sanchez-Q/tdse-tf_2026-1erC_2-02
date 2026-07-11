@@ -22,7 +22,7 @@
 ## 1. Pruebas de Integración (Video)
 En el siguiente video se presenta la demostración funcional del prototipo integrado. En el mismo se pueden observar los casos de uso principales: el ingreso de la clave mediante el dial analógico, el accionamiento del servomotor, y la respuesta del sistema ante la activación de las alarmas de seguridad (apertura de puerta y detección de luz).
 
-- **Enlace al video:** [Pendiente para la defensa del 15/07]
+- **Enlace al video:** https://drive.google.com/file/d/1Y487q2GHReyy--sFOcvcwviaAO1gJ2YK/view?usp=drivesdk
 
 **Aclaración sobre el video:** Este primer video de prueba lo grabamos en vertical por una cuestión de comodidad mientras trabajábamos. Para la entrega final, vamos a grabar el video en formato horizontal para que se pueda ver y evaluar mucho mejor.
 ## 2. Hardware: Esquema y Cableado
