@@ -100,5 +100,4 @@ PENDIENTE (requisitos de la consigna que todavia no estan)
 
   - Modulo HM-10 (Bluetooth) + App
   - Dip switches
-  - Core/Src/datalog.c quedo sin usar: lo reemplaza task_storage.c.
-    Se puede sacar del proyecto.
+  - Diagramas de estado dibujados (las FSM ya estan en el codigo)

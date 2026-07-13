@@ -65,6 +65,9 @@ extern I2C_HandleTypeDef hi2c1;
 /********************** internal data definition *****************************/
 task_storage_dta_t task_storage_dta;
 
+/* Diagnostico: escrituras descartadas por cola llena (deberia quedarse en 0) */
+volatile uint32_t g_storage_dropped;
+
 const char *p_task_storage   = "Task Storage (AT24C32 EEPROM)";
 const char *p_task_storage_  = "Non-Blocking Code";
 const char *p_task_storage__ = "(Update by Time Code, period = 1mS)";
@@ -201,11 +204,25 @@ void storage_save_password(const uint8_t *digits)
 	for (i = 0; i < PASSWORD_LEN; i++)
 	{
 		rec[2u + i] = digits[i];
-		task_storage_dta.password[i] = digits[i];	/* espejo en RAM ya */
 	}
-	task_storage_dta.password_set = true;
 
-	(void)queue_push(PWD_STORE_ADDR, rec, PWD_REC_SIZE);
+	/* El espejo en RAM se actualiza SOLO si la escritura se pudo encolar.
+	   Si la cola estaba llena y se actualizaba igual, la clave andaba hasta
+	   el proximo reset y despues volvia a ser la vieja: el usuario quedaba
+	   afuera de su propia cerradura sin entender por que. Prefiero que el
+	   cambio falle de una y se pueda reintentar. */
+	if (queue_push(PWD_STORE_ADDR, rec, PWD_REC_SIZE))
+	{
+		for (i = 0; i < PASSWORD_LEN; i++)
+		{
+			task_storage_dta.password[i] = digits[i];
+		}
+		task_storage_dta.password_set = true;
+	}
+	else
+	{
+		g_storage_dropped++;
+	}
 }
 
 uint8_t storage_attempt_count(void)

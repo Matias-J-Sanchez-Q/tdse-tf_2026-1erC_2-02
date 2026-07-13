@@ -248,44 +248,80 @@ static void handle_global_events(task_system_ev_t event)
    cambio de verdad (asi no se inunda al Task Actuator con un evento por ms). */
 static void update_outputs(void)
 {
-	bool b_alarm;
+	bool               b_alarm;
+	task_actuator_st_t alarm_st;
+	task_actuator_st_t led_st;
 
 	/* La alarma suena si el sistema esta armado y la puerta esta abierta,
-	   o si detecto sobretension (sabotaje). Los pulsos de "clave incorrecta"
-	   los maneja el propio Task Actuator con EV_ACT_PULSE. */
+	   o si detecto sobretension (sabotaje). */
 	b_alarm = (!task_system_dta.disarmed) &&
 	          (task_system_dta.door_open || task_system_dta.overvoltage);
 
-	if (b_alarm != b_alarm_prev)
-	{
-		b_alarm_prev = b_alarm;
-		put_event_task_actuator(b_alarm ? EV_ACT_ON : EV_ACT_OFF, ID_ALARM);
+	alarm_st = task_actuator_dta_list[ID_ALARM].state;
+	led_st   = task_actuator_dta_list[ID_LED_STATUS].state;
 
-		/* El LED de estado parpadea mientras hay alarma */
-		if (b_alarm)
+	/* --- ALARMA ------------------------------------------------------------
+	   OJO: NO alcanza con reaccionar al flanco de b_alarm. El pulso de
+	   "clave incorrecta" (EV_ACT_PULSE) usa el MISMO actuador, y al vencer
+	   deja la salida en OFF. Si en ese momento la condicion de alarma seguia
+	   activa, la sirena se apagaba sola con la puerta abierta.
+
+	   Por eso lo que se hace es RE-AFIRMAR el estado deseado: mientras la
+	   condicion de alarma este activa, si el actuador no esta en ON, se lo
+	   vuelve a poner en ON. Un pulso nunca puede dejar la sirena muda. */
+	if (b_alarm)
+	{
+		if (ST_ACT_ON != alarm_st)
 		{
-			put_event_task_actuator(EV_ACT_BLINK, ID_LED_STATUS);
+			put_event_task_actuator(EV_ACT_ON, ID_ALARM);
 		}
-		else
+	}
+	else if (b_alarm_prev)
+	{
+		/* Flanco de bajada: se termino la condicion de alarma.
+		   Pero si justo hay un pulso de clave incorrecta corriendo, lo dejo
+		   terminar en vez de cortarlo. */
+		if (ST_ACT_PULSE != alarm_st)
 		{
-			put_event_task_actuator(task_system_dta.disarmed ? EV_ACT_ON : EV_ACT_OFF,
-			                        ID_LED_STATUS);
+			put_event_task_actuator(EV_ACT_OFF, ID_ALARM);
 		}
 	}
 
-	/* El cerrojo sigue al estado de armado: desarmado = abierto */
+	b_alarm_prev = b_alarm;
+
+	/* --- LED DE ESTADO -----------------------------------------------------
+	   Parpadea con alarma, fijo si esta desarmado, apagado si esta armado.
+	   Misma logica de re-afirmacion. */
+	if (b_alarm)
+	{
+		if (ST_ACT_BLINK != led_st)
+		{
+			put_event_task_actuator(EV_ACT_BLINK, ID_LED_STATUS);
+		}
+	}
+	else if (task_system_dta.disarmed)
+	{
+		if (ST_ACT_ON != led_st)
+		{
+			put_event_task_actuator(EV_ACT_ON, ID_LED_STATUS);
+		}
+	}
+	else
+	{
+		if (ST_ACT_OFF != led_st)
+		{
+			put_event_task_actuator(EV_ACT_OFF, ID_LED_STATUS);
+		}
+	}
+
+	/* --- CERROJO -----------------------------------------------------------
+	   Sigue al estado de armado: desarmado = traba liberada. */
 	if (task_system_dta.disarmed != b_disarmed_prev)
 	{
 		b_disarmed_prev = task_system_dta.disarmed;
 
 		put_event_task_actuator(task_system_dta.disarmed ? EV_ACT_ON : EV_ACT_OFF,
 		                        ID_LOCK);
-
-		if (!b_alarm)
-		{
-			put_event_task_actuator(task_system_dta.disarmed ? EV_ACT_ON : EV_ACT_OFF,
-			                        ID_LED_STATUS);
-		}
 	}
 }
 

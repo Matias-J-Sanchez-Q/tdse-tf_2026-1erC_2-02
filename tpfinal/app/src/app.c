@@ -214,13 +214,7 @@ void app_update(void)
 			g_app_overrun_cnt++;
 		}
 
-		/* --- BAJO CONSUMO ----------------------------------------------- */
-		/* Termino el trabajo del tick: duermo el CPU hasta la proxima
-		   interrupcion (el SysTick de 1 ms, a mas tardar). El micro deja de
-		   ejecutar instrucciones: es la diferencia entre un super-loop que
-		   gira al pedo al 100% y uno que solo consume lo que trabaja. */
-		HAL_PWR_EnterSLEEPMode(PWR_MAINREGULATOR_ON, PWR_SLEEPENTRY_WFI);
-
+		/* Hay mas ticks encolados? (o sea: me atrase) */
 		__asm("CPSID i");
 		if (G_APP_TICK_CNT_INI < g_app_tick_cnt)
 		{
@@ -233,6 +227,21 @@ void app_update(void)
 		}
 		__asm("CPSIE i");
 	}
+
+	/* --- BAJO CONSUMO ------------------------------------------------------
+	   Recien ACA se duerme, cuando ya no queda ningun tick pendiente.
+
+	   El WFI NO puede ir adentro del while: si una vuelta se paso de 1 ms,
+	   queda un tick encolado, y dormirse igual significa que el sistema nunca
+	   recupera el atraso (se despierta con el SysTick siguiente, ya con dos
+	   ticks de deuda, y asi). Durmiendo solo cuando no hay trabajo, el
+	   ejecutor puede correr varias vueltas seguidas hasta ponerse al dia.
+
+	   El micro deja de ejecutar instrucciones hasta la proxima interrupcion
+	   (el SysTick, a mas tardar 1 ms): esa es la diferencia entre un
+	   super-loop que gira al pedo al 100% y uno que solo consume lo que
+	   realmente trabaja. */
+	HAL_PWR_EnterSLEEPMode(PWR_MAINREGULATOR_ON, PWR_SLEEPENTRY_WFI);
 }
 
 /* Callback del SysTick: el latido de 1 ms de todo el sistema */

@@ -46,6 +46,9 @@
 /* Filtro exponencial simple del pote: y = y + (x - y)/4 */
 #define POT_FILTER_SHIFT		(2u)
 
+/* Ticks que se le dan a una conversion antes de declararla colgada */
+#define ADC_TIMEOUT_TICKS		(5u)
+
 /********************** external data declaration ****************************/
 extern ADC_HandleTypeDef hadc1;		/* potenciometro     - definido en main.c */
 extern ADC_HandleTypeDef hadc2;		/* monitor de tension- definido en main.c */
@@ -53,7 +56,11 @@ extern ADC_HandleTypeDef hadc2;		/* monitor de tension- definido en main.c */
 /********************** internal data definition *****************************/
 task_analog_dta_t task_analog_dta;
 
-static bool b_conversion_pending;	/* hay una conversion en vuelo */
+static bool     b_conversion_pending;	/* hay una conversion en vuelo    */
+static uint32_t conversion_ticks;		/* hace cuanto que esta en vuelo  */
+
+/* Diagnostico: conversiones que nunca terminaron (deberia quedarse en 0) */
+volatile uint32_t g_analog_timeout_cnt;
 
 const char *p_task_analog   = "Task Analog (ADC multiplexado)";
 const char *p_task_analog_  = "Non-Blocking Code";
@@ -83,6 +90,8 @@ void task_analog_init(void *parameters)
 	task_analog_dta.overvoltage = false;
 
 	b_conversion_pending = false;
+	conversion_ticks     = 0;
+	g_analog_timeout_cnt = 0;
 }
 
 void task_analog_update(void *parameters)
@@ -102,8 +111,28 @@ void task_analog_update(void *parameters)
 	   en el proximo tick. Tampoco espero aca. */
 	if (RESET == __HAL_ADC_GET_FLAG(p_adc, ADC_FLAG_EOC))
 	{
+		/* Guarda: una conversion sana termina en decenas de us, o sea en el
+		   tick siguiente. Si el EOC no llega en ADC_TIMEOUT_TICKS, algo se
+		   colgo (ADC mal configurado, reloj fuera de rango). Sin esto, la
+		   tarea quedaria esperando para siempre y el pote dejaria de
+		   responder sin que nadie se entere. */
+		conversion_ticks++;
+
+		if (ADC_TIMEOUT_TICKS < conversion_ticks)
+		{
+			HAL_ADC_Stop(p_adc);
+			b_conversion_pending = false;
+			conversion_ticks     = 0;
+			g_analog_timeout_cnt++;
+
+			/* cambio de canal para no quedarme trabado en el que falla */
+			task_analog_dta.state = (ST_ANA_POT == task_analog_dta.state)
+			                        ? ST_ANA_VMON : ST_ANA_POT;
+		}
 		return;
 	}
+
+	conversion_ticks = 0;
 
 	raw = (uint16_t)HAL_ADC_GetValue(p_adc);	/* leer el DR limpia el EOC */
 	HAL_ADC_Stop(p_adc);
