@@ -1,54 +1,28 @@
 /*
- * Copyright (c) 2026 Juan Manuel Cruz <jcruz@fi.uba.ar> <jcruz@frba.utn.edu.ar>.
- * All rights reserved.
+ * task_system_interface.c
  *
- * Redistribution and use in source and binary forms, with or without
- * modification, are permitted provided that the following conditions are met:
+ * Cola de eventos del Task System (productor/consumidor, buffer circular).
  *
- * 1. Redistributions of source code must retain the above copyright
- *    notice, this list of conditions and the following disclaimer.
+ * IMPORTANTE: put_event_task_system() se llama tanto desde tareas como desde
+ * la ISR del boton azul (EXTI). Por eso las operaciones sobre la cola son
+ * SECCIONES CRITICAS: se deshabilitan las interrupciones para que una ISR no
+ * corrompa los indices a mitad de una actualizacion.
  *
- * 2. Redistributions in binary form must reproduce the above copyright
- *    notice, this list of conditions and the following disclaimer in the
- *    documentation and/or other materials provided with the distribution.
- *
- * 3. Neither the name of the copyright holder nor the names of its
- *    contributors may be used to endorse or promote products derived from
- *    this software without specific prior written permission.
- *
- * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
- * "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
- * LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS
- * FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE
- * COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT,
- * INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
- * (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
- * SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
- * HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT,
- * STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING
- * IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
- * POSSIBILITY OF SUCH DAMAGE.
- *
- * @author : Juan Manuel Cruz <jcruz@fi.uba.ar> <jcruz@frba.utn.edu.ar>
+ * Si la cola se llena, el evento nuevo se DESCARTA. Nunca se bloquea ni se
+ * pisa un evento viejo sin querer: perder una pulsacion es mucho menos grave
+ * que colgar el ejecutor ciclico.
  */
 
 /********************** inclusions *******************************************/
-/* Project includes */
 #include "main.h"
-
-/* Demo includes */
 #include "logger.h"
-#include "dwt.h"
-
-/* Application & Tasks includes */
 #include "board.h"
 #include "app.h"
 #include "task_system_attribute.h"
+#include "task_system_interface.h"
 
 /********************** macros and definitions *******************************/
-#define EMPTY			(255ul)
 #define QUEUE_LENGTH	(16ul)
-#define ITEM_SIZE		(sizeof(task_system_ev_t))
 
 typedef struct
 {
@@ -58,54 +32,88 @@ typedef struct
 	task_system_ev_t	queue[QUEUE_LENGTH];
 } event_task_system_queue_t;
 
-/********************** internal data declaration ****************************/
-
-/********************** internal functions declaration ***********************/
-
 /********************** internal data definition *****************************/
-event_task_system_queue_t event_task_system_queue;
+static volatile event_task_system_queue_t event_task_system_queue;
 
-/********************** external data declaration ****************************/
+/* Diagnostico: cuantos eventos se perdieron por cola llena (mirar por
+   Live Expressions; deberia quedarse en 0). */
+volatile uint32_t g_event_task_system_lost;
 
 /********************** external functions definition ************************/
 void init_event_task_system(void)
 {
 	uint32_t i;
 
-	event_task_system_queue.head = 0;
-	event_task_system_queue.tail = 0;
+	event_task_system_queue.head  = 0;
+	event_task_system_queue.tail  = 0;
 	event_task_system_queue.count = 0;
 
 	for (i = 0; i < QUEUE_LENGTH; i++)
-		event_task_system_queue.queue[i] = EMPTY;
+	{
+		event_task_system_queue.queue[i] = EV_SYS_NONE;
+	}
+
+	g_event_task_system_lost = 0;
 }
 
 void put_event_task_system(task_system_ev_t event)
 {
-	event_task_system_queue.count++;
-	event_task_system_queue.queue[event_task_system_queue.head++] = event;
+	__asm("CPSID i");	/* seccion critica: tambien entra desde una ISR */
 
-	if (QUEUE_LENGTH == event_task_system_queue.head)
-		event_task_system_queue.head = 0;
+	if (QUEUE_LENGTH > event_task_system_queue.count)
+	{
+		event_task_system_queue.queue[event_task_system_queue.head] = event;
+
+		event_task_system_queue.head++;
+		if (QUEUE_LENGTH == event_task_system_queue.head)
+		{
+			event_task_system_queue.head = 0;
+		}
+
+		event_task_system_queue.count++;
+	}
+	else
+	{
+		g_event_task_system_lost++;
+	}
+
+	__asm("CPSIE i");
 }
 
 task_system_ev_t get_event_task_system(void)
 {
-	task_system_ev_t event;
+	task_system_ev_t event = EV_SYS_NONE;
 
-	event_task_system_queue.count--;
-	event = event_task_system_queue.queue[event_task_system_queue.tail];
-	event_task_system_queue.queue[event_task_system_queue.tail++] = EMPTY;
+	__asm("CPSID i");
 
-	if (QUEUE_LENGTH == event_task_system_queue.tail)
-		event_task_system_queue.tail = 0;
+	if (0ul < event_task_system_queue.count)
+	{
+		event = event_task_system_queue.queue[event_task_system_queue.tail];
+		event_task_system_queue.queue[event_task_system_queue.tail] = EV_SYS_NONE;
+
+		event_task_system_queue.tail++;
+		if (QUEUE_LENGTH == event_task_system_queue.tail)
+		{
+			event_task_system_queue.tail = 0;
+		}
+
+		event_task_system_queue.count--;
+	}
+
+	__asm("CPSIE i");
 
 	return event;
 }
 
 bool any_event_task_system(void)
 {
-  return (event_task_system_queue.head != event_task_system_queue.tail);
+	bool b_any;
+
+	__asm("CPSID i");
+	b_any = (0ul < event_task_system_queue.count);
+	__asm("CPSIE i");
+
+	return b_any;
 }
 
 /********************** end of file ******************************************/

@@ -1,35 +1,6 @@
 /*
- * Copyright (c) 2026 Juan Manuel Cruz <jcruz@fi.uba.ar> <jcruz@frba.utn.edu.ar>.
- * All rights reserved.
- *
- * Redistribution and use in source and binary forms, with or without
- * modification, are permitted provided that the following conditions are met:
- *
- * 1. Redistributions of source code must retain the above copyright
- *    notice, this list of conditions and the following disclaimer.
- *
- * 2. Redistributions in binary form must reproduce the above copyright
- *    notice, this list of conditions and the following disclaimer in the
- *    documentation and/or other materials provided with the distribution.
- *
- * 3. Neither the name of the copyright holder nor the names of its
- *    contributors may be used to endorse or promote products derived from
- *    this software without specific prior written permission.
- *
- * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
- * "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
- * LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS
- * FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE
- * COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT,
- * INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
- * (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
- * SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
- * HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT,
- * STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING
- * IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
- * POSSIBILITY OF SUCH DAMAGE.
- *
- * @author : Juan Manuel Cruz <jcruz@fi.uba.ar> <jcruz@frba.utn.edu.ar>
+ * task_system_attribute.h
+ * Eventos, estados y datos del Task System (la FSM principal de la cerradura)
  */
 
 #ifndef TASK_SYSTEM_ATTRIBUTE_H_
@@ -41,33 +12,79 @@ extern "C" {
 #endif
 
 /********************** inclusions *******************************************/
+#include <stdint.h>
+#include <stdbool.h>
 
 /********************** macros ***********************************************/
+#define PASSWORD_LEN		(4u)
 
 /********************** typedef **********************************************/
-/* Events to excite Task System */
-typedef enum task_system_ev {EV_SYS_IDLE,
-							 EV_SYS_ACTIVE,
-							 EV_SYS_CAMERA,
-							 EV_SYS_BUTTON,
-							 EV_SYS_SENSOR_COIL} task_system_ev_t;
 
-/* State of Task System */
-typedef enum task_system_st {ST_SYS_IDLE,
-							 ST_SYS_ACTIVE} task_system_st_t;
+/* Eventos que excitan al Task System. Los publican task_sensor, task_analog,
+   task_storage y la ISR del boton azul, siempre via put_event_task_system(). */
+typedef enum task_system_ev
+{
+	EV_SYS_NONE = 0,
+
+	/* Entradas digitales */
+	EV_SYS_BTN_MODE,		/* boton azul B1 (EXTI): rota el modo           */
+	EV_SYS_BTN_CONFIRM,		/* PB0 (polling + antirrebote): confirma digito */
+	EV_SYS_DOOR_OPEN,		/* la puerta paso a abierta                     */
+	EV_SYS_DOOR_CLOSE,		/* la puerta paso a cerrada                     */
+
+	/* Entradas analogicas */
+	EV_SYS_POT_MOVED,		/* el potenciometro se movio (=> hay actividad) */
+	EV_SYS_OVERVOLTAGE,		/* la tension de PA7 supero el umbral           */
+	EV_SYS_NORMALVOLTAGE,	/* la tension de PA7 volvio a valores normales  */
+
+	/* Notificaciones de otras tareas */
+	EV_SYS_STORAGE_DONE		/* la EEPROM termino de escribir                */
+} task_system_ev_t;
+
+/* Estados del Task System.
+   Los MODOS de operacion que pide la consigna se mapean asi:
+     NORMAL  -> ST_SYS_VERIFY (+ ST_SYS_MSG)
+     SET_UP  -> ST_SYS_CHANGE y ST_SYS_MENU_*
+     REPOSO  -> ST_SYS_SLEEP  (bajo consumo)                                */
+typedef enum task_system_st
+{
+	ST_SYS_VERIFY,			/* NORMAL: ingreso una clave y la comparo       */
+	ST_SYS_CHANGE,			/* SET_UP: cargo una clave nueva                */
+	ST_SYS_MENU_SELECT,		/* SET_UP: elijo opcion de menu con el pote     */
+	ST_SYS_MENU_LOG,		/* SET_UP: recorro el registro de intentos      */
+	ST_SYS_MENU_CLOCK,		/* SET_UP: veo el reloj del DS3231              */
+	ST_SYS_MSG,				/* mostrando un mensaje temporal                */
+	ST_SYS_SLEEP			/* REPOSO: pantalla apagada, bajo consumo       */
+} task_system_st_t;
 
 typedef struct
 {
-	uint32_t			tick;
 	task_system_st_t	state;
 	task_system_ev_t	event;
-	bool				flag;
+	bool				flag;			/* hay un evento sin procesar        */
+
+	uint32_t			tick_msg;		/* ms que le quedan al mensaje       */
+	uint32_t			tick_ui;		/* ms hasta el proximo refresco      */
+	uint32_t			tick_idle;		/* ms de inactividad acumulados      */
+	uint32_t			tick_relock;	/* ms hasta el re-trabado automatico */
+
+	uint8_t				digit_index;	/* digitos cargados hasta ahora      */
+	uint8_t				digit_buffer[PASSWORD_LEN];
+
+	bool				door_open;
+	bool				overvoltage;
+	bool				disarmed;		/* true tras una clave correcta      */
+
+	/* Ciclo de apertura: despues de desarmar, el sistema NO se re-arma hasta
+	   haber visto la puerta ABRIRSE y despues CERRARSE. Sin este latch,
+	   cualquier evento de "puerta cerrada" espurio (rebote del reed, ruido,
+	   o el reed cableado al reves) vuelve a trabar el cerrojo en la cara del
+	   usuario justo despues de acertar la clave. */
+	bool				door_seen_open;
 } task_system_dta_t;
 
 /********************** external data declaration ****************************/
-extern task_system_dta_t task_system_dta_list[];
-
-/********************** external functions declaration ***********************/
+extern task_system_dta_t task_system_dta;
 
 /********************** End of CPP guard *************************************/
 #ifdef __cplusplus

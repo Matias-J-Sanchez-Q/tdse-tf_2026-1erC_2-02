@@ -188,6 +188,12 @@ void SysTick_Handler(void)
   HAL_IncTick();
   /* USER CODE BEGIN SysTick_IRQn 1 */
 
+  /* Tick de 1 ms del ejecutor ciclico.
+     HAL_SYSTICK_IRQHandler() es lo que termina llamando a
+     HAL_SYSTICK_Callback(), que esta implementado en app/src/app.c y es
+     el que incrementa g_app_tick_cnt. Sin esta linea el sistema no late. */
+  HAL_SYSTICK_IRQHandler();
+
   /* USER CODE END SysTick_IRQn 1 */
 }
 

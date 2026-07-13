@@ -1,35 +1,9 @@
 /*
- * Copyright (c) 2026 Juan Manuel Cruz <jcruz@fi.uba.ar>.
- * All rights reserved.
+ * board.h - Mapa de pines del prototipo (Cerradura electronica)
+ * Placa: NUCLEO-F103RB / RC
  *
- * Redistribution and use in source and binary forms, with or without
- * modification, are permitted provided that the following conditions are met:
- *
- * 1. Redistributions of source code must retain the above copyright
- *    notice, this list of conditions and the following disclaimer.
- *
- * 2. Redistributions in binary form must reproduce the above copyright
- *    notice, this list of conditions and the following disclaimer in the
- *    documentation and/or other materials provided with the distribution.
- *
- * 3. Neither the name of the copyright holder nor the names of its
- *    contributors may be used to endorse or promote products derived from
- *    this software without specific prior written permission.
- *
- * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
- * "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
- * LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS
- * FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE
- * COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT,
- * INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
- * (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
- * SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
- * HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT,
- * STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING
- * IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
- * POSSIBILITY OF SUCH DAMAGE.
- *
- * @author : Juan Manuel Cruz <jcruz@fi.uba.ar> <jcruz@frba.utn.edu.ar>
+ * Toda la asignacion fisica de pines vive ACA. Ningun task_*.c debe
+ * tener numeros de pin hardcodeados.
  */
 
 #ifndef BOARD_H_
@@ -41,96 +15,79 @@ extern "C" {
 #endif
 
 /********************** inclusions *******************************************/
+#include "main.h"
 
 /********************** macros ***********************************************/
 #define NUCLEO_F103RC		(0)
-#define NUCLEO_F303K8		(1)
-#define NUCLEO_F401RE		(2)
-#define NUCLEO_F446RE		(3)
-#define NUCLEO_F413ZH		(4)
-#define NUCLEO_F429ZI		(5)
-#define NUCLEO_F439ZI		(6)
-#define NUCLEO_F767ZI		(7)
-#define STM32F407G_DISC1	(8)
-#define STM32F429I_DISC1	(9)
+#define BOARD				(NUCLEO_F103RC)
 
-#define BOARD (NUCLEO_F103RC)
+/* ---------------------------------------------------------------------------
+ * ENTRADAS DIGITALES
+ * ------------------------------------------------------------------------ */
 
-/* STM32 Nucleo Boards - 32 Pins */
-#if (BOARD == NUCLEO_F303K8)
+/* BTN_MODE: boton azul de usuario B1 (PC13). Gestionado por INTERRUPCION (EXTI).
+   En la Nucleo tiene pull-up externo: suelto = 1, apretado = 0.            */
+#define BTN_MODE_PIN		B1_Pin			/* PC13 */
+#define BTN_MODE_PORT		B1_GPIO_Port
+#define BTN_MODE_PRESSED	GPIO_PIN_RESET
 
-#endif
+/* BTN_CONFIRM: pulsador entre PB0 y GND. Gestionado por POLLING + antirrebote.
+   Pull-up interno: suelto = 1, apretado = 0.                               */
+#define BTN_CONFIRM_PIN		GPIO_PIN_0
+#define BTN_CONFIRM_PORT	GPIOB
+#define BTN_CONFIRM_PRESSED	GPIO_PIN_RESET
 
-/* STM32 Nucleo Boards - 64 Pins */
-#if ((BOARD == NUCLEO_F103RC) || (BOARD == NUCLEO_F401RE) || (BOARD == NUCLEO_F446RE))
+/* DOOR: reed switch de puerta en PA1, a GND, con pull-up interno.
+   Puerta cerrada (iman presente, contacto cerrado) = 0
+   Puerta abierta                                   = 1                     */
+#define DOOR_PIN			GPIO_PIN_1
+#define DOOR_PORT			GPIOA
+#define DOOR_OPEN_LEVEL		GPIO_PIN_SET
 
-#define BTN_A_PIN		B1_Pin
-#define BTN_A_PORT		B1_GPIO_Port
-#define BTN_A_PRESSED	GPIO_PIN_RESET
-#define BTN_A_HOVER		GPIO_PIN_SET
+/* ---------------------------------------------------------------------------
+ * SALIDAS DIGITALES
+ * ------------------------------------------------------------------------ */
 
-/* BTN_B -> PA1 (CN8 pin 2 / Arduino D1) */
-#define BTN_B_PIN		GPIO_PIN_1
-#define BTN_B_PORT		GPIOA
-#define BTN_B_PRESSED	GPIO_PIN_RESET
-#define BTN_B_HOVER		GPIO_PIN_SET
+/* LED de estado: LD2 de la Nucleo (PA5) */
+#define LED_STATUS_PIN		LD2_Pin			/* PA5 */
+#define LED_STATUS_PORT		LD2_GPIO_Port
+#define LED_STATUS_ON		GPIO_PIN_SET
+#define LED_STATUS_OFF		GPIO_PIN_RESET
 
-/* BTN_C -> PA4 (CN8 pin 5 / Arduino D5) */
-#define BTN_C_PIN		GPIO_PIN_4
-#define BTN_C_PORT		GPIOA
-#define BTN_C_PRESSED	GPIO_PIN_RESET
-#define BTN_C_HOVER		GPIO_PIN_SET
+/* Alarma / buzzer (PA4). Activo en alto. */
+#define ALARM_PIN			GPIO_PIN_4
+#define ALARM_PORT			GPIOA
+#define ALARM_ON			GPIO_PIN_SET
+#define ALARM_OFF			GPIO_PIN_RESET
 
-/* BTN_D -> PB0 (CN8 pin 7 / Arduino D3)
- * Configurar en el .ioc como GPIO_Input con Pull-up interno.
- * Activo en LOW (GPIO_PIN_RESET). */
-#define BTN_D_PIN		GPIO_PIN_0
-#define BTN_D_PORT		GPIOB
-#define BTN_D_PRESSED	GPIO_PIN_RESET
-#define BTN_D_HOVER		GPIO_PIN_SET
+/* Salida "clave OK" (PA6). Activo en alto, 3,3V. */
+#define OK_PIN				GPIO_PIN_6
+#define OK_PORT				GPIOA
+#define OK_ON				GPIO_PIN_SET
+#define OK_OFF				GPIO_PIN_RESET
 
-#define LED_A_PIN		LD2_Pin
-#define LED_A_PORT		LD2_GPIO_Port
-#define LED_A_ON		GPIO_PIN_SET
-#define LED_A_OFF		GPIO_PIN_RESET
+/* ---------------------------------------------------------------------------
+ * ENTRADAS ANALOGICAS
+ * ------------------------------------------------------------------------ */
 
-#endif
+/* Potenciometro de seleccion de digito / opcion de menu: PA0 = ADC1_IN0 */
+#define POT_ADC_CHANNEL		ADC_CHANNEL_0
 
-/* STM32 Nucleo Boards - 144 Pins */
-#if ((BOARD == NUCLEO_F413ZH) || (BOARD == NUCLEO_F429ZI) || (BOARD == NUCLEO_F439ZI) || (BOARD == NUCLEO_F767ZI))
+/* Monitor de tension 0-3,3V (deteccion de sabotaje): PA7 = ADC2_IN7 */
+#define VMON_PIN			GPIO_PIN_7
+#define VMON_PORT			GPIOA
+#define VMON_ADC_CHANNEL	ADC_CHANNEL_7
 
-#define BTN_A_PIN		USER_Btn_Pin
-#define BTN_A_PORT		USER_Btn_GPIO_Port
-#define BTN_A_PRESSED	GPIO_PIN_SET
-#define BTN_A_HOVER		GPIO_PIN_RESET
+/* Umbral de disparo de la alarma por sobretension, en mV */
+#define VMON_ALARM_MV		(1000u)
 
-#define LED_A_PIN		LD1_Pin
-#define LED_A_PORT		LD1_GPIO_Port
-#define LED_A_ON		GPIO_PIN_SET
-#define LED_A_OFF		GPIO_PIN_RESET
-
-#endif
-
-/* STM32 Discovery Kits */
-#if ((BOARD == STM32F407G_DISC1) || (BOARD == STM32F429I_DISC1))
-
-#define BTN_A_PIN		B1_Pin
-#define BTN_A_PORT		B1_GPIO_Port
-#define BTN_A_PRESSED	GPIO_PIN_SET
-#define BTN_A_HOVER		GPIO_PIN_RESET
-
-#define LED_A_PIN		LD3_Pin
-#define LED_A_PORT		LD3_GPIO_Port
-#define LED_A_ON		GPIO_PIN_SET
-#define LED_A_OFF		GPIO_PIN_RESET
-
-#endif
-
-/********************** typedef **********************************************/
-
-/********************** external data declaration ****************************/
-
-/********************** external functions declaration ***********************/
+/* ---------------------------------------------------------------------------
+ * SERVO DEL CERROJO (PB6 = TIM4_CH1, PWM 50 Hz)
+ * ------------------------------------------------------------------------ */
+#define SERVO_PIN			GPIO_PIN_6
+#define SERVO_PORT			GPIOB
+#define SERVO_CLOSED_DEG	(20u)
+#define SERVO_OPEN_DEG		(90u)
 
 /********************** End of CPP guard *************************************/
 #ifdef __cplusplus

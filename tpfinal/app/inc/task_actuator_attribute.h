@@ -1,35 +1,6 @@
 /*
- * Copyright (c) 2026 Juan Manuel Cruz <jcruz@fi.uba.ar> <jcruz@frba.utn.edu.ar>.
- * All rights reserved.
- *
- * Redistribution and use in source and binary forms, with or without
- * modification, are permitted provided that the following conditions are met:
- *
- * 1. Redistributions of source code must retain the above copyright
- *    notice, this list of conditions and the following disclaimer.
- *
- * 2. Redistributions in binary form must reproduce the above copyright
- *    notice, this list of conditions and the following disclaimer in the
- *    documentation and/or other materials provided with the distribution.
- *
- * 3. Neither the name of the copyright holder nor the names of its
- *    contributors may be used to endorse or promote products derived from
- *    this software without specific prior written permission.
- *
- * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
- * "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
- * LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS
- * FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE
- * COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT,
- * INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
- * (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
- * SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
- * HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT,
- * STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING
- * IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
- * POSSIBILITY OF SUCH DAMAGE.
- *
- * @author : Juan Manuel Cruz <jcruz@fi.uba.ar> <jcruz@frba.utn.edu.ar>
+ * task_actuator_attribute.h
+ * Eventos, estados y datos del Task Actuator (todas las salidas del sistema)
  */
 
 #ifndef TASK_ACTUATOR_ATTRIBUTE_H_
@@ -41,43 +12,69 @@ extern "C" {
 #endif
 
 /********************** inclusions *******************************************/
-
-/********************** macros ***********************************************/
+#include "main.h"
+#include <stdbool.h>
 
 /********************** typedef **********************************************/
-/* Events to excite Task Actuator */
-typedef enum task_actuator_ev {EV_LED_IDLE,
-							   EV_LED_ACTIVE} task_actuator_ev_t;
 
-/* States of Task Actuator */
-typedef enum task_actuator_st {ST_LED_IDLE,
-							   ST_LED_ACTIVE} task_actuator_st_t;
+/* Eventos que excitan al Task Actuator */
+typedef enum task_actuator_ev
+{
+	EV_ACT_OFF,			/* apagar / cerrar traba                           */
+	EV_ACT_ON,			/* encender / abrir traba (queda asi)              */
+	EV_ACT_PULSE,		/* encender por tick_max ms y apagarse solo        */
+	EV_ACT_BLINK		/* parpadear con semiperiodo tick_max (solo GPIO)  */
+} task_actuator_ev_t;
 
-/* Identifier of Task Actuator */
-typedef enum task_actuator_id {ID_LED_A} task_actuator_id_t;
+/* Estados del Task Actuator */
+typedef enum task_actuator_st
+{
+	ST_ACT_OFF,
+	ST_ACT_ON,
+	ST_ACT_PULSE,
+	ST_ACT_BLINK
+} task_actuator_st_t;
 
+/* Que clase de salida fisica es */
+typedef enum task_actuator_kind
+{
+	ACT_GPIO,			/* pin digital on/off                              */
+	ACT_SERVO			/* servo del cerrojo (PWM): OFF=trabado, ON=abierto */
+} task_actuator_kind_t;
+
+/* Actuadores del sistema */
+typedef enum task_actuator_id
+{
+	ID_LED_STATUS,		/* LD2 (PA5): estado del sistema        */
+	ID_ALARM,			/* PA4: buzzer / sirena                 */
+	ID_OK,				/* PA6: salida "clave correcta"         */
+	ID_LOCK				/* PB6: servo del cerrojo               */
+} task_actuator_id_t;
+
+/* Configuracion (ROM), una entrada por actuador */
 typedef struct
 {
-	task_actuator_id_t	identifier;
-	GPIO_TypeDef *		gpio_port;
-	uint16_t			pin;
-	GPIO_PinState		led_on;
-	GPIO_PinState		led_off;
-	uint32_t			tick_max;
+	task_actuator_id_t		identifier;
+	task_actuator_kind_t	kind;
+	GPIO_TypeDef *			gpio_port;	/* solo si kind == ACT_GPIO */
+	uint16_t				pin;		/* solo si kind == ACT_GPIO */
+	GPIO_PinState			act_on;
+	GPIO_PinState			act_off;
+	uint32_t				tick_max;	/* duracion del pulso / semiperiodo del blink, en ms */
 } task_actuator_cfg_t;
 
+/* Datos dinamicos (RAM), una entrada por actuador */
 typedef struct
 {
-	uint32_t			tick;
-	task_actuator_st_t	state;
-	task_actuator_ev_t	event;
-	bool				flag;
+	uint32_t				tick;
+	task_actuator_st_t		state;
+	task_actuator_ev_t		event;
+	bool					flag;		/* hay un evento sin procesar          */
+	bool					level;		/* nivel logico actual (para el blink) */
 } task_actuator_dta_t;
 
 /********************** external data declaration ****************************/
 extern task_actuator_dta_t task_actuator_dta_list[];
-
-/********************** external functions declaration ***********************/
 
 /********************** End of CPP guard *************************************/
 #ifdef __cplusplus
