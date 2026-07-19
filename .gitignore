@@ -1,0 +1,20 @@
+# --- Artefactos de compilacion de STM32CubeIDE -------------------------------
+# Nada de esto va al repositorio: se regenera con cada build y solo ensucia
+# los diffs (un .map cambia entero aunque toques una sola linea de codigo).
+tpfinal/Debug/
+tpfinal/Release/
+*.o
+*.d
+*.elf
+*.map
+*.list
+*.bin
+*.hex
+*.su
+
+# --- Metadata del IDE / OS ---------------------------------------------------
+.settings/
+.metadata/
+*.launch
+.DS_Store
+Thumbs.db
