@@ -1,8 +1,3 @@
----
-title: 'Memoria del Trabajo Final: Cerradura Electrónica de Alta Seguridad'
----
-
-CAMBIAR NOMBRE DEL ARCHIVO A: Memoria_Video_Código
 
 <img width="300" alt="FIUBA" src="https://github.com/Matias-J-Sanchez-Q/tdse-tf_2026-1erC_2-02/raw/main/Imagenes/logo-fiuba.png" />
 
@@ -45,13 +40,6 @@ El sistema incluye:
 
 En cuanto al software, se programó un sistema eficiente y de bajo consumo. El procesador funciona de forma no bloqueante y, cada vez que termina de procesar las tareas pendientes, entra automáticamente en un modo de reposo (*sleep*). Esto asegura que el microcontrolador solo consuma energía durante las fracciones de segundo en las que realmente está trabajando, maximizando la duración de la batería.
 
-<!---
-El presente trabajo detalla el diseño, desarrollo e implementación de una Cerradura Electrónica de Alta Seguridad sobre la plataforma NUCLEO-F103RB (ARM Cortex-M3). La interfaz de usuario consta de un potenciómetro lineal para la selección analógica de dígitos y un display LCD 16x2 controlado vía bus I²C.
-
-El dispositivo actúa sobre un cerrojo mecánico operado por un servomotor SG90 mediante modulación por ancho de pulso (PWM) y registra un historial de los últimos 10 intentos de acceso en una memoria EEPROM AT24C32, estampados temporalmente gracias a un RTC DS3231. Para la protección física, el sistema integra un sensor magnético de apertura de puerta y un divisor con fotorresistencia (LDR) que disparan una alarma ante la vulneración del gabinete.
-
-El firmware fue desarrollado bajo un entorno *Bare Metal* del tipo **Event-Triggered System**, estructurado como un **ejecutivo cíclico con tick de 1 ms**. La aplicación se descompone en seis tareas de código no bloqueante que se comunican exclusivamente a través de colas de eventos e interfaces, cada una gobernada por su propia máquina de estados finitos. Al completar cada vuelta del ciclo, el microcontrolador entra en modo *sleep* (`WFI`) hasta la siguiente interrupción, de modo que el CPU solo consume energía durante el tiempo que efectivamente trabaja.
--->
 ---
 
 
@@ -125,9 +113,9 @@ La Tabla 2.1 resume los requisitos funcionales del sistema, clasificados por ár
 | :--- | :--- |
 | Disparador | El usuario desea ingresar su combinación para abrir la caja fuerte. |
 | Precondiciones | El sistema está en modo verificación, la puerta cerrada y sin alarmas activas. |
-| Flujo principal | El usuario ingresa la secuencia de 4 dígitos con el dial, confirmando cada uno con el pulsador. El sistema valida contra la clave persistida en EEPROM; si es correcta, libera el servomotor, desarma la alarma y registra el intento con la estampa del RTC. |
+| Flujo principal | El usuario ingresa la secuencia de 4 dígitos con el dial, confirmando cada uno con el pulsador. El sistema valida contra la clave persistida en EEPROM; si es correcta, libera el servomotor, desactiva la alarma y registra el intento con la estampa del RTC. |
 | Flujo alternativo | Clave incorrecta: el sistema pulsa la alarma (LED rojo + buzzer) durante 2 s, mantiene la traba puesta y registra el intento fallido. |
-| Flujo alternativo | Clave correcta pero puerta nunca abierta: transcurridos 10 s, el cerrojo se vuelve a trabar y el sistema se re-arma automáticamente. |
+| Flujo alternativo | Clave correcta pero puerta nunca abierta: transcurridos 10 s, el cerrojo se vuelve a trabar y el sistema se re-activa automáticamente. |
 
 **Caso de uso 2: consulta del historial de aperturas**
 
@@ -171,7 +159,7 @@ Servomotor SG90 controlado por PWM, alimentado desde una fuente externa de 5 V i
 
 ### 2.3.6 Sensores digitales
 
-Sensor magnético (MS-38BL) para detección de apertura de puerta (PA1) y *touch switch* (TS4-5) para la confirmación de dígitos (PB0). Ambos con pull-up interno y antirrebote por software.
+Sensor magnético (MS-38BL) para detección de apertura de puerta (PA1) y *boton analogico* (TS4-5) para la confirmación de dígitos (PB0). Ambos con pull-up interno y antirrebote por software.
 
 ---
 
@@ -220,9 +208,13 @@ Para complementar los diagramas teóricos, a continuación mostramos el montaje 
 <p><em>Figura 3.6: Detalle de las conexiones sobre la placa experimental y disposición de los módulos.</em></p>
 </div>
 
+<div align="center">
+<img width="600" alt="Salidas del sistema" src="https://github.com/Matias-J-Sanchez-Q/tdse-tf_2026-1erC_2-02/raw/main/Imagenes/frente.jpeg" />
+<p><em>Figura 3.7: Vista frontal del proyecto.</em></p>
+</div>
+
 
 La Tabla 3.1 resume la asignación de pines. 
-Cabe destacar que I²C1 opera sobre PB8/PB9 gracias al remapeo por AFIO; de no hacerlo, el bus ocuparía PB6/PB7 y colisionaría con la salida PWM del servomotor.
 
 | Periférico | Pin(es) | Función |
 | :--- | :--- | :--- |
@@ -284,7 +276,7 @@ El sistema implementa cinco FSM independientes, una por tarea:
 
 **FSM de actuadores (`task_actuator`)** — `ST_ACT_OFF`, `ST_ACT_ON`, `ST_ACT_PULSE`, `ST_ACT_BLINK`. Es el único módulo del programa que escribe una salida física.
 
-**FSM del display (`task_display`)** y **FSM de almacenamiento (`task_storage`)** — descritas en S3.3.
+**FSM del display (`task_display`)** y **FSM de almacenamiento (`task_storage`)** — descritas en s3.3.
 
 A continuación, se presenta el diagrama de la máquina de estados del sistema:
 
@@ -296,42 +288,13 @@ A continuación, se presenta el diagrama de la máquina de estados del sistema:
 
 ### 3.2.4 Lógica de armado y re-armado del cerrojo
 
-Una clave correcta **desarma** el sistema y libera la traba. El re-armado exige un ciclo completo *abrir → cerrar* de la puerta: un evento de "puerta cerrada" aislado no puede volver a trabar el cerrojo. Adicionalmente, si el usuario acierta la clave pero nunca llega a abrir la puerta, un temporizador de 10 s vuelve a trabar el cerrojo y re-arma el sistema, evitando que una apertura autorizada deje la caja desprotegida indefinidamente.
+Una clave correcta **desactiva** el sistema y libera la traba. El re-activado exige un ciclo completo *abrir → cerrar* de la puerta: un evento de "puerta cerrada" aislado no puede volver a trabar el cerrojo. Adicionalmente, si el usuario acierta la clave pero nunca llega a abrir la puerta, un temporizador de 10 s vuelve a trabar el cerrojo y re-arma el sistema, evitando que una apertura autorizada deje la caja desprotegida indefinidamente.
 
 Mientras la condición de alarma esté activa, la salida correspondiente se vuelve afirma en cada ciclo en lugar de accionarse solo en el flanco. Esto impide que un pulso de corta duración (por ejemplo, el aviso de clave incorrecta) deje la sirena en silencio con la puerta abierta.
 
 
-<!---
-## 3.3 El desafío del tiempo real: cómo se cumple el presupuesto de 1 ms
-
-
-
-Tres periféricos del sistema son intrínsecamente lentos y, en una implementación ingenua, harían imposible cerrar una vuelta del ejecutivo cíclico en menos de 1 ms. Cada uno exigió una solución específica.
-
-**El LCD.** Escribir una línea de 16 caracteres por I²C lleva varios milisegundos. La solución es el patrón *framebuffer + shadow*: las tareas escriben lo que desean mostrar en una matriz de 2×16 caracteres en RAM (operación instantánea, sin I²C), y `task_display` compara ese framebuffer contra una copia de lo que el LCD realmente tiene escrito, enviando **un solo carácter por tick**. Una pantalla completa tarda algunas decenas de milisegundos en volcarse, imperceptible para una interfaz de usuario. Como además solo se transmiten los caracteres que cambiaron, en régimen permanente la tarea no genera tráfico I²C.
-
-**La EEPROM.** La AT24C32 requiere ~5 ms de ciclo de escritura interno tras cada página. El driver original resolvía esto con `HAL_Delay(5)`, es decir, bloqueando el micro cinco milisegundos: cinco veces el período completo del ejecutivo. La solución es una **cola de escrituras diferidas**: quien quiere guardar algo encola la operación y retorna al instante; `task_storage` la despacha y paga los 5 ms descontando ticks (`ST_STO_IDLE → ST_STO_WRITE → ST_STO_WAIT`), no bloqueando. Los registros se dimensionaron a 16 bytes alineados a 16, de modo que **ninguna escritura cruza un límite de página** de 32 bytes y cada una se resuelve con una única transacción I²C. Todas las lecturas, en cambio, salen de un espejo en RAM cargado una sola vez durante la inicialización: durante el lazo no hay ni una lectura I²C.
-
-**El ADC.** En lugar de esperar el fin de conversión, `task_analog` arranca la conversión en un tick y lee el resultado en el siguiente, alternando entre ADC1 y ADC2. Cada canal queda muestreado cada 4 ms, más que suficiente para un potenciómetro y un divisor LDR.
-
-**El árbitro del bus I²C.** Las tres tareas anteriores comparten el mismo bus, y una transacción I²C es tiempo de reloj de pared: no importa cuán rápido corra el CPU. Si en un mismo tick coincidieran el LCD (~250 µs), la EEPROM (~430 µs) y el RTC (~250 µs), la suma superaría el presupuesto. Por eso se implementó un **token de bus**: en cada vuelta del ejecutivo, una sola tarea puede realizar una transacción I²C; las demás no esperan, sino que reintentan en el tick siguiente. Con esto el peor caso de I²C por vuelta queda acotado a una única transacción y el WCET se vuelve predecible.
-
-Complementariamente, el bus se configuró a **400 kHz** (Fast Mode, soportado por los tres esclavos) y la lectura del RTC se cachea una vez por segundo, de modo que el camino crítico de validación de clave no toca el bus en absoluto.
--->
-
 
 ## 3.3 Persistencia en EEPROM
-<!---
-El mapa de memoria de la EEPROM es el siguiente:
-
-| Dirección | Contenido |
-| :--- | :--- |
-| 0x0004 – 0x0009 | Clave: firma (0xC3), flag de validez y 4 dígitos |
-| 0x0020 – 0x0023 | Cabecera del *ring buffer*: firma, puntero de escritura, cantidad |
-| 0x0040 – 0x00DF | 10 registros de 16 bytes con los intentos de acceso |
-
-La firma permite distinguir una memoria ya inicializada de una virgen.
- -->
  Cada registro de intento almacena la fecha y hora del RTC, los 4 dígitos ingresados y el resultado (correcto/incorrecto). El historial es un *buffer* circular: al llenarse, el intento más nuevo sobrescribe al más antiguo.
 
 
@@ -342,13 +305,6 @@ Para cuidar la batería, diseñamos el sistema de forma tal que no esté gastand
 Básicamente, el procesador se pausa y solo se vuelve a despertar cuando necesita hacer algo nuevo. A diferencia de un programa tradicional que está funcionando al 100% todo el tiempo aunque no tenga nada para hacer, el cerebro de nuestra cerradura solo gasta energía el tiempo que realmente está trabajando.
 
 Además de "dormir" al microcontrolador, cuando el sistema detecta que nadie está usando la cerradura, apagamos por completo la pantalla LCD y su luz de fondo, ya que es el componente que más energía consume.
-<!---
-Al completar todas las tareas de un tick, y **solo si no quedan ticks pendientes**, el ejecutivo ejecuta `HAL_PWR_EnterSLEEPMode(..., PWR_SLEEPENTRY_WFI)`. El núcleo detiene la ejecución de instrucciones hasta la próxima interrupción (el SysTick, a lo sumo 1 ms después). Esta es la diferencia fundamental respecto de un *super-loop* clásico, que gira al 100% de ocupación aunque no tenga nada que hacer: aquí el CPU solo está despierto el tiempo que realmente trabaja.
-
-La condición de "solo si no quedan ticks pendientes" no es un detalle: dormir con trabajo encolado impediría que el sistema recupere un eventual atraso.
-
-En modo REPOSO se agrega el apagado del display y de la retroiluminación del LCD, que es la carga dominante de la interfaz.
--->
 ---
 
 # Capítulo 4: Ensayos y resultados
@@ -359,9 +315,6 @@ En modo REPOSO se agrega el apagado del display y de la retroiluminación del LC
 
 *   **Enlace al video:** https://drive.google.com/file/d/1aX3uYLCGlMD5LRpf_hL87mvzt0ArB9Q4/view?usp=drivesdk
 ## 4.2 Salida de la pantalla Console & Build Analyzer
-
-> **[PENDIENTE DE MEDICIÓN]**
-> Compilar la versión definitiva y capturar la salida del Build Analyzer de STM32CubeIDE. Completar:
 
 | Sección | Tamaño [Bytes] |
 | :--- | :---: |
@@ -375,9 +328,6 @@ En modo REPOSO se agrega el apagado del display y de la retroiluminación del LC
 | RAM | 3.056 | 20480 | 14,92  |
 
 
-<!---
-*Observación esperada:* la eliminación del módulo `datalog.c` (reemplazado por `task_storage.c`) debería reflejarse en una reducción de `.text` respecto de la versión 1.1.
--->
 
 ## 4.3 Medición y análisis de tiempos de ejecución (WCET)
 
@@ -413,13 +363,7 @@ La condición de planificabilidad es **U < 1**. El firmware calcula este valor e
 > - **Factor de uso (U = C/T):** 43 %
 
 
-<!---
-*Corrección respecto de la revisión 1.1:* la memoria anterior reportaba un WCET de 42.955 µs (≈43 ms) y de allí despejaba un período de 100 ms. Ese cálculo era circular —asumía el resultado para justificar el período— y además era incompatible con un ejecutivo cíclico de 1 ms, en el que semejante WCET implicaría un factor de uso superior al 4000%. La cifra provenía del binario anterior a 8 MHz y de una instrumentación que no acotaba el bus I²C.
--->
 ## 4.5 Medición y análisis de consumo
-
-> **[PENDIENTE DE MEDICIÓN]**
-> Repetir las mediciones con miliamperímetro y osciloscopio sobre el binario definitivo, discriminando los rieles de 3,3 V y 5 V. La incorporación del `WFI` debería producir una reducción medible de la corriente base respecto de la revisión 1.1, cosa que antes no ocurría.
 
 | Modo de operación | Corriente 
 | :--- | :---: |
@@ -443,11 +387,12 @@ El aprendizaje más relevante del trabajo no estuvo en la funcionalidad sino en 
 ## 5.2 Próximos pasos
 
 
-1.   **Endurecer el bus I²C**: actualmente, si un esclavo deja de responder, el HAL sale por timeout pero no hay rutina de recuperación del bus.
-2. **Ensamble definitivo** dentro de un gabinete impreso en 3D para evaluar la disposición de los sensores frente a variables físicas reales.
+1.   **Endurecer el bus I²C:** actualmente, si un esclavo deja de responder, el HAL sale por timeout pero no hay rutina de recuperación del bus.
+2. **Ensamble definitivo:** dentro de un gabinete impreso en 3D para evaluar la disposición de los sensores frente a variables físicas reales.
 
 3. **Cifrado de datos en la memoria EEPROM:** Implementar algoritmos de encriptación (como AES de bajo consumo o hashing para la clave) para asegurar que los registros de auditoría y la contraseña no puedan ser leídos directamente si se extrae físicamente el chip de memoria.
-4. Integración de conectividad inalámbrica: Incorporar un módulo de comunicación (como un ESP32 o módulo Bluetooth) para permitir la apertura remota mediante una aplicación móvil y la descarga inalámbrica del historial de accesos guardado en la EEPROM.
+4. **Integración de conectividad inalámbrica:** Incorporar un módulo de comunicación (como un ESP32 o módulo Bluetooth) para permitir la apertura remota mediante una aplicación móvil y la descarga inalámbrica del historial de accesos guardado en la EEPROM.
+
 ---
 
 
