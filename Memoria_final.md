@@ -39,14 +39,18 @@ Desde la perspectiva del software, se desarrolló un sistema eficiente y de bajo
 
 
 ## Registro de versiones
-
+<div align="center">
+  
 | Revisión | Cambios realizados | Fecha |
 | :---: | --- | :---: |
 | 1.0 | Creación del esqueleto y estructura base del documento. | 11/07/2026 |
 | 1.1 | Redacción detallada, desarrollo y completado de las secciones del informe. | 15/07/2026 |
 | 1.2 | Correcciones según devolución de primer entrega| 29/07/2026 |
+| 1.3 | Correcciones según devolución de segunda entrega| 01/08/2026 |
 
 <em>Tabla 0.1 — Registro de versiones del documento.</em><br><br>
+
+</div>
 
 ---
 
@@ -113,7 +117,7 @@ Se plantea la construcción de un prototipo de control de acceso autónomo y de 
 
 Para dimensionar el trabajo y contextualizar la solución desarrollada, se relevó la oferta disponible en el mercado argentino, identificando dos grandes familias de productos: las cerraduras digitales económicas de teclado y las cajas de seguridad de gama alta con dial de combinación.
 
-**1. Producto de gama de entrada: [Caja fuerte digital y llave]** [https://www.mercadolibre.com.ar/caja-fuerte-caja-digital-y-llave-global-23x17x17cm-negra-oficina-hogar/p/MLA34953591](https://www.mercadolibre.com.ar/caja-fuerte-caja-digital-y-llave-global-23x17x17cm-negra-oficina-hogar/p/MLA34953591)
+**1. Producto de gama de entrada:** [Link caja fuerte digital y llave (Mercado Libre)](https://www.mercadolibre.com.ar/caja-fuerte-caja-digital-y-llave-global-23x17x17cm-negra-oficina-hogar/p/MLA34953591)
 
 
 <div align="center">
@@ -124,7 +128,7 @@ Para dimensionar el trabajo y contextualizar la solución desarrollada, se relev
 * Características: Gabinete de acero compacto de 3 kg con teclado electrónico de membrana (código programable de 3 a 8 dígitos) y cerradura mecánica de emergencia. Cuenta con cierre por doble pasador motorizado, bloqueo temporal tras tres intentos fallidos e indicadores LED simples (abierto, batería baja, bloqueado).
 * Costo aproximado: ~$85.000 ARS ($57 USD).
 
-**2. Producto de gama alta / industrial: [Caja fuerte con dial SentrySafe]** [https://www.mercadolibre.com.ar/caja-fuerte-sentrysafe-a-prueba-de-fuego-y-agua-082-pies-negro/p/MLA63399897?matt_tool=38087446&utm_source=google_shopping&utm_medium=organic&pdp_filters=item_id%3AMLA1654557953&from=gshop](https://www.mercadolibre.com.ar/caja-fuerte-sentrysafe-a-prueba-de-fuego-y-agua-082-pies-negro/p/MLA63399897?matt_tool=38087446&utm_source=google_shopping&utm_medium=organic&pdp_filters=item_id%3AMLA1654557953&from=gshop)
+**2. Producto de gama alta / industrial:** [Link caja fuerte con dial SentrySafe (Mercado Libre)](https://www.mercadolibre.com.ar/caja-fuerte-sentrysafe-a-prueba-de-fuego-y-agua-082-pies-negro/p/MLA63399897 )
 
 
 <div align="center">
@@ -208,7 +212,7 @@ Posteriormente, conforme avanzó el desarrollo del firmware y la selección de l
 
 <p align="center"><em>Tabla 2.2: Evolución final de los requisitos funcionales del sistema.</em></p>
 
-Más adelante, se detalla si se cumplieron o no los requisitos, y se da la razón en caso de no haberse implementado.
+En la sección 4.7 se detalla si se cumplieron o no los requisitos, y se explica la razón en caso de no haberse implementado.
 
 ## 2.2 Casos de uso
  
@@ -256,59 +260,63 @@ A continuación se describen los principales componentes de hardware, módulos p
 
 ### 2.3.1 Potenciómetro como dial analógico
 
+En la Figura 2.1 se muestra el potenciómetro lineal de 10 kΩ que se utiliza como dial. Para eso la lectura del cursor se digitaliza en 12 bits, la lectura se filtra y se mapea linealmente al rango de dígitos 0 a 9. Este potenciómetro se utiliza también para navegar las opciones del menú y para detectar actividad del usuario.
+
 <div align="center">
 <img width="500" alt="Potenciómetro lineal 10k" src="https://github.com/Matias-J-Sanchez-Q/tdse-tf_2026-1erC_2-02/raw/main/Imagenes/PM-103LI.JPG" />
 <p><em>Figura 2.1: Potenciómetro lineal utilizado como dial analógico.</em></p>
 </div>
 
-Potenciómetro lineal de 10 kΩ. El valor de 12 bits se filtra y se mapea linealmente al rango de dígitos 0 a 9. El mismo canal se reutiliza para navegar las opciones del menú y para detectar actividad del usuario.
-
 ### 2.3.2 Divisor con fotorresistencia (LDR)
+
+En la Figura 2.2 se detalla la fotorresistencia LDR-05 implementada en un divisor resistivo con una resistencia fija de 10 kΩ. Al abrirse el gabinete, la luz incidente modifica la tensión del divisor; el firmware evalúa esta variación comparando la tensión contra un umbral configurable para detectar intrusiones.
 
 <div align="center">
 <img width="500" alt="Fotorresistencia LDR-05" src="https://github.com/Matias-J-Sanchez-Q/tdse-tf_2026-1erC_2-02/raw/main/Imagenes/LDR-05.JPG" />
 <p><em>Figura 2.2: Fotorresistencia LDR-05 para detección de intrusión lumínica.</em></p>
 </div>
 
-LDR-05 en divisor resistivo con una resistencia fija de 10 kΩ. Al abrirse el gabinete, la luz incidente modifica la tensión del divisor, el firmware compara esa tensión contra un umbral configurable.
-
 ### 2.3.3 Reloj de tiempo real y memoria EEPROM
+
+En la Figura 2.3 se expone el módulo combinado DS3231 (RTC) con la memoria EEPROM AT24C32 integrada. Este módulo cuenta con un respaldo por batería CR2032 para retener la base de tiempo ante cortes de energía y se comunica con el microcontrolador de forma eficiente mediante el bus I²C1.
 
 <div align="center">
 <img width="500" alt="Módulo RTC DS3231 y EEPROM AT24C32" src="https://github.com/Matias-J-Sanchez-Q/tdse-tf_2026-1erC_2-02/raw/main/Imagenes/CLON-REAL.TIME.JPG" />
 <p><em>Figura 2.3: Módulo RTC DS3231 con memoria EEPROM integrada.</em></p>
 </div>
 
-Módulo combinado DS3231 (RTC) con EEPROM AT24C32 integrada y respaldo por batería CR2032, comunicado por I²C1.
-
 ### 2.3.4 Display LCD
+
+En la Figura 2.4 se presenta el display LCD 16x2 equipado con un *backpack* I²C basado en el expansor de puertos PCF8574. Este componente opera sobre el mismo bus I²C1 compartido con el módulo RTC/EEPROM, lo que optimiza significativamente el uso de pines del microcontrolador.
 
 <div align="center">
 <img width="500" alt="Display LCD 16x2" src="https://github.com/Matias-J-Sanchez-Q/tdse-tf_2026-1erC_2-02/raw/main/Imagenes/LCD-1602BLUE-I2C24741AA013.jpg" />
 <p><em>Figura 2.4: Display LCD 16x2 con adaptador de bus I²C.</em></p>
 </div>
 
-LCD 16x2 con *backpack* I²C basado en PCF8574, sobre el mismo bus I²C1.
-
 ### 2.3.5 Actuador de traba
+
+En la Figura 2.5 se observa el micro servomotor SG90, el cual actúa como traba física controlado por una señal PWM. Para aislar el ruido eléctrico y los picos de consumo inductivo, este actuador es alimentado desde una fuente externa de 5 V independiente de la NUCLEO, manteniendo unificado únicamente el plano de masa (GND).
 
 <div align="center">
 <img width="500" alt="Servomotor SG90" src="https://github.com/Matias-J-Sanchez-Q/tdse-tf_2026-1erC_2-02/raw/main/Imagenes/servomotor.png" />
 <p><em>Figura 2.5: Micro servomotor SG90 para el accionamiento de la traba.</em></p>
 </div>
 
-Servomotor SG90 controlado por PWM, alimentado desde una fuente externa de 5 V independiente de la NUCLEO, con GND compartido.
-
 ### 2.3.6 Sensores digitales
 
-<div align="center">
-<!-- Nota de edición: El link proporcionado para el sensor magnético coincide con la imagen del potenciómetro. Se aplicó el link exactamente como fue provisto. -->
-<img width="500" alt="Sensores digitales" src="https://github.com/Matias-J-Sanchez-Q/tdse-tf_2026-1erC_2-02/raw/main/Imagenes/SENSOR_MAGNETICO.jpg" />
-<p><em>Figura 2.6: Entradas digitales del sistema.</em></p>
-</div>
+En la Figura 2.6 se muestra el sensor magnético (MC-38), el cual se instala en la puerta del gabinete y se conecta al pin PA1 para detectar de forma pasiva si la misma ha sido abierta. Por otro lado, en la Figura 2.7 se observa el pulsador conectado al pin PB0, el cual actúa como botón de confirmación físico para que el usuario valide cada dígito ingresado con el dial. Ambos componentes cuentan con fitros de antirrebote implementadas por *software* para garantizar que las lecturas sean estables y libres de ruido.
 
-Sensor magnético (MC-38) para detección de apertura de puerta (PA1) y *boton analogico* (TS4-5) para la confirmación de dígitos (PB0). Ambos con pull-up interno y antirrebote por software.
-
+<table align="center">
+  <tr>
+    <td align="center"><img width="300" alt="Sensor magnético" src="https://github.com/Matias-J-Sanchez-Q/tdse-tf_2026-1erC_2-02/raw/main/Imagenes/SENSOR_MAGNETICO.jpg" /></td>
+    <td align="center"><img width="300" alt="Botón de confirmación" src="https://github.com/Matias-J-Sanchez-Q/tdse-tf_2026-1erC_2-02/raw/Matias-J-Sanchez-Q-patch-1/Imagenes/boton.jpg" /></td>
+  </tr>
+  <tr>
+    <td align="center"><em>Figura 2.6: Sensor magnético (MC-38).</em></td>
+    <td align="center"><em>Figura 2.7: Botón de confirmación.</em></td>
+  </tr>
+</table>
 
 ---
 
@@ -371,6 +379,8 @@ Para complementar los diagramas teóricos, las Figuras 3.5 a 3.7 documentan el m
 </div>
 
 La Tabla 3.1 resume la asignación de pines que se desprende de las Figuras 3.2 a 3.4.
+
+<div align="center">
  
 | Periférico | Pin(es) | Función |
 | :--- | :--- | :--- |
@@ -387,26 +397,22 @@ La Tabla 3.1 resume la asignación de pines que se desprende de las Figuras 3.2 
  
 <p align="center"><em>Tabla 3.1: Asignación de pines del sistema.</em></p>
 
+</div>
+
 ## 3.2 Diseño del firmware
  
 En esta sección se detalla la concepción y estructura del software desarrollado para el microcontrolador. El firmware fue diseñado bajo un enfoque *bare-metal* fuertemente orientado a eventos, priorizando la modularidad, el determinismo temporal y la eficiencia energética. A continuación se describe la arquitectura de ejecución elegida, las configuraciones críticas del reloj del sistema y la implementación de la lógica de control mediante máquinas de estado finito no bloqueantes. 
  
 ### 3.2.1 Arquitectura: ejecutivo cíclico y Event-Triggered System
  
-El firmware se organiza como un **ejecutivo cíclico** gobernado por el `SysTick`, configurado a 1000 ticks por segundo. El *callback* del SysTick incrementa un contador de ticks pendientes; el lazo principal detecta ese contador y, por cada tick pendiente, ejecuta **una vuelta completa** de la lista de tareas en el orden fijo que ilustra la Figura 3.9:
- 
-```
-    ESCRUTAR              PROCESAR              ACTUAR
- ┌──────────────┐     ┌──────────────┐     ┌────────────────┐
- │ task_sensor  │     │ task_system  │     │ task_actuator  │
- │ task_analog  │───▶│    (FSM)     │───▶ │ task_display   │
- └──────────────┘     └──────────────┘     │ task_storage   │
-                                           └────────────────┘
-```
- 
+El firmware se organiza como un ejecutivo cíclico gobernado por el `SysTick`, configurado a 1000 ticks por segundo. El *callback* del SysTick incrementa un contador de ticks pendientes; el lazo principal detecta ese contador y, por cada tick pendiente, ejecuta una vuelta completa de la lista de tareas en el orden fijo que ilustra la Figura 3.9:
+
+
+<div align="center">
+<img width="650" alt="ejecutivo ciclico" src="https://raw.githubusercontent.com/Matias-J-Sanchez-Q/tdse-tf_2026-1erC_2-02/main/escrutar.jpeg" />
 <p><em>Figura 3.9: Orden de despacho de las tareas dentro de una vuelta del ejecutivo cíclico.</em></p>
 </div>
-
+ 
 El orden que muestra la Figura 3.9 no es arbitrario: garantiza que un evento generado por un sensor en el tick *N* sea procesado por la FSM y ejecutado por los actuadores en ese mismo tick, acotando la latencia de punta a punta a 1 ms.
  
 Ninguna tarea bloquea. No se utiliza `HAL_Delay()` en el lazo principal: todas las temporizaciones (mensajes, refresco de UI, inactividad, pulsos de alarma, ciclo de escritura de la EEPROM) se resuelven con contadores de ticks.
@@ -428,6 +434,8 @@ El sistema opera a **64 MHz** (HSI 8 MHz ÷ 2 × PLL 16). Esta configuración ex
 El sistema implementa cinco FSM independientes, una por tarea. Solo una de ellas concentra la lógica de negocio; las cuatro restantes son de servicio y traducen eventos de hardware en eventos de aplicación, o viceversa.
  
 **FSM del sistema (`task_system`)** — es la única tarea con lógica de negocio y no accede a ningún periférico. Sus estados se corresponden con los tres modos de operación exigidos por la consigna según la distribución que resume la Tabla 3.2.
+
+<div align="center">
  
 | Modo | Estados |
 | :--- | :--- |
@@ -435,16 +443,18 @@ El sistema implementa cinco FSM independientes, una por tarea. Solo una de ellas
 | SET_UP | `ST_SYS_CHANGE`, `ST_SYS_MENU_SELECT`, `ST_SYS_MENU_LOG`, `ST_SYS_MENU_CLOCK` |
 | REPOSO | `ST_SYS_SLEEP` |
  
-<p align="center"><em>Tabla 3.2: Correspondencia entre modos de operación y estados de la FSM del sistema.</em></p>
+<em>Tabla 3.2: Correspondencia entre modos de operación y estados de la FSM del sistema.</em>
 
-En la Figura 3.10 se presenta el diagrama de la máquina de estados del sistema.
+</div>
+
+En la Figura 3.10 se presenta el diagrama de la máquina de estados del sistema. Se observa que, tras el reset, la FSM adopta como estado inicial ST_SYS_VERIFY, correspondiente al modo NORMAL: es el estado en el que el sistema pasa la mayor parte del tiempo y el único desde el cual puede liberarse la traba.
  
 <div align="center">
 <img width="900" alt="Diagrama de estados del sistema" src="https://github.com/Matias-J-Sanchez-Q/tdse-tf_2026-1erC_2-02/raw/main/Imagenes/diagrama_estados.jpeg" />
 <p><em>Figura 3.10: Diagrama de la máquina de estados del sistema.</em></p>
 </div>
 
-Se observa que, tras el *reset*, la FSM adopta como estado inicial `ST_SYS_VERIFY`, correspondiente al modo NORMAL: es el estado en el que el sistema pasa la mayor parte del tiempo y el único desde el cual puede liberarse la traba.
+
  
 Dentro de `ST_SYS_VERIFY` se aprecia un autolazo disparado por el evento de confirmación del pulsador (PB0). Cada activación de ese lazo captura el dígito que indica el dial e incrementa el índice de la posición en curso, sin abandonar el estado. Recién cuando se confirma el cuarto dígito la FSM evalúa la combinación contra la clave persistida en EEPROM y transiciona a `ST_SYS_MSG`, llevando consigo el resultado de la comparación. Este último es un estado transitorio y temporizado: mientras permanece en él, la FSM sostiene el mensaje en el LCD y solicita a `task_actuator` el pulso correspondiente —LED verde ante acierto, LED rojo y *buzzer* ante error— y al expirar el temporizador retorna incondicionalmente a `ST_SYS_VERIFY`. La ausencia de cualquier otra salida desde `ST_SYS_MSG` es deliberada: garantiza que el sistema no pueda quedar retenido mostrando un mensaje.
  
@@ -472,14 +482,12 @@ Este capítulo expone los ensayos realizados para validar el correcto funcionami
 
 ## 4.1 Prueba de integración (Video)
 
-*   **Enlace al video:** [Ver video en Google Drive](https://drive.google.com/file/d/1aX3uYLCGlMD5LRpf_hL87mvzt0ArB9Q4/view?usp=drivesdk)
+En el video disponible en este [link](https://drive.google.com/file/d/1aX3uYLCGlMD5LRpf_hL87mvzt0ArB9Q4/view?usp=drivesdk) se muestra el funcionamiento completo del prototipo, partiendo desde el modo de reposo hasta la apertura exitosa del cerrojo tras ingresar la clave correspondiente mediante el dial analógico, como se muestra en la Figura 4.1. Asimismo, se expone la respuesta del sistema ante una contraseña inválida y el accionamiento de las alertas visuales y sonoras.
 
 <div align="center">
 <img width="600" alt="Captura del video de integración" src= https://github.com/Matias-J-Sanchez-Q/tdse-tf_2026-1erC_2-02/raw/Matias-J-Sanchez-Q-patch-1/Imagenes/video_prueba.png />
 <p><em>Figura 4.1: Captura de pantalla del ensayo de integración mostrando la validación del acceso.</em></p>
 </div>
-
-En el registro audiovisual se demuestra el funcionamiento completo del prototipo, partiendo desde el modo de reposo hasta la apertura exitosa del cerrojo tras ingresar la clave correspondiente mediante el dial analógico como se muestra en la Figura 4.1. Asimismo, se expone la respuesta del sistema ante una contraseña inválida y el accionamiento de las alertas visuales y sonoras.
 
 ## 4.2 Pruebas funcionales de hardware y firmware
 
@@ -508,12 +516,17 @@ La Figura 4.2 reproduce la salida del *Build Analyzer* de STM32CubeIDE para el b
 
 Para facilitar el análisis de estos resultados, la Tabla 4.1 consolida el tamaño de cada sección del binario (`.text`, `.data` y `.bss`) y su impacto directo sobre la ocupación efectiva en las regiones físicas del microcontrolador STM32F103RB.
 
+<div align="center">
+
 | Región Física | Secciones del Binario | Usado [Bytes] | Total Disponible [Bytes] | Ocupación |
 | :--- | :--- | :---: | :---: | :---: |
 | **FLASH** | `.text` (34.476) + `.data` (188) | 34.664 | 131.072 | **26,45 %** |
 | **RAM** | `.bss` (2.868) + `.data` (188) | 3.056 | 20.480 | **14,92 %** |
 
-<p align="center"><em>Tabla 4.1: Desglose de secciones del binario y ocupación de memoria.</em></p>
+<em>Tabla 4.1: Desglose de secciones del binario y ocupación de memoria.</em>
+
+</div>
+
 
 Como se observa en la métrica final, el firmware utiliza aproximadamente un cuarto de la memoria de programa (FLASH) disponible y menos de un sexto de la memoria dinámica (RAM), dejando un margen operativo sumamente holgado para las mejoras y expansiones propuestas en la sección 5.2.
  
@@ -536,11 +549,17 @@ Todas estas variables son inspeccionables por *Live Expressions* en el arreglo `
  
 La Tabla 4.3 presenta los tiempos de ejecución medidos sobre la vuelta completa del ejecutivo cíclico descrito en la Figura 3.9.
  
+<div align="center">
+
 | Tarea | BCET [µs] | WCET [µs] |
 | :--- | :---: | :---: |
 | **Vuelta completa** | 300 | 615 |
- 
-<p align="center"><em>Tabla 4.3: Tiempos de ejecución medidos mediante el contador DWT.</em></p>
+
+<em>Tabla 4.3: Tiempos de ejecución medidos mediante el contador DWT.</em>
+
+</div>
+
+Como se observa en los resultados empíricos, el tiempo de ejecución en el peor de los casos (WCET) consume un máximo de 615 µs frente a la ventana temporal estricta de 1000 µs impuesta por el *SysTick*, mientras que el mejor caso (BCET) requiere apenas 300 µs. Esto demuestra que el sistema es determinista y está libre de sobrepasos (*overruns*), dejando un margen operativo temporal holgado (de al menos 385 µs) para absorber las mejoras y expansiones de firmware propuestas en la sección 5.2  sin riesgo de colgar el sistema.
 
 ## 4.5 Cálculo del Factor de Uso (U) de la CPU
  
@@ -548,11 +567,11 @@ El factor de uso se define como el cociente entre el tiempo de cómputo del peor
  
 $$U = \frac{C}{T} \qquad (4.1)$$
  
-donde **T = 1000 µs** es el período del ejecutivo cíclico, fijado por el SysTick. T es un dato de diseño, no una incógnita: no se despeja a partir de U, sino que U se calcula a partir de él.
+donde T = 1000 µs es el período del ejecutivo cíclico, fijado por el SysTick. T es un dato de diseño, no una incógnita: no se despeja a partir de U, sino que U se calcula a partir de él.
  
-Reemplazando en la Ecuación (4.1) el WCET de la Tabla 4.3, se obtiene un Factor de uso máximo del **61,5 %**. El firmware calcula este valor en tiempo de ejecución y lo expone en `g_app_u_pct`.
+Reemplazando en la Ecuación (4.1) el WCET de la Tabla 4.3, se obtiene un Factor de uso máximo del 61,5 %. El firmware calcula este valor en tiempo de ejecución y lo expone en `g_app_u_pct`.
  
- El valor total obtenido ($U = 0,615$) corresponde a una **cota conservadora** (peor caso absoluto). Representa el instante de mayor exigencia computacional de la cerradura, que ocurre únicamente cuando se combinan múltiples eventos de hardware lentos en un mismo ciclo. 
+ El valor total obtenido ($U = 0,615$) corresponde a una cota conservadora (peor caso absoluto). Representa el instante de mayor exigencia computacional de la cerradura, que ocurre únicamente cuando se combinan múltiples eventos de hardware lentos en un mismo ciclo. 
 
 En contraste, las mediciones experimentales demostraron que durante el régimen de operación normal (espera de ingreso de dígitos o validación), el tiempo de ejecución es sensiblemente menor, acercándose al BCET de 300 µs (lo que representa un uso de CPU de apenas el 30 %). 
 
@@ -566,14 +585,18 @@ Para evaluar el impacto energético del sistema, se procedió a medir exclusivam
 * Se registraron los valores en tres escenarios clave: durante la validación de clave, al accionar el servomotor y durante la suspensión del procesador (modo reposo).
 
 La Tabla 4.4 resume el consumo medido en los tres regímenes de operación del sistema.
- 
+
+<div align="center">
+  
 | Modo de operación | Corriente |
 | :--- | :---: |
 | Ingresando clave (NORMAL) | 7,6 mA |
 | Apertura de puerta (servo + lógica) | 12,4 mA |
 | Reposo (display off + WFI) | 4,7 mA |
  
-<p align="center"><em>Tabla 4.4: Consumo energético del sistema por modo de operación.</em></p>
+<em>Tabla 4.4: Consumo energético del sistema por modo de operación.</em>
+
+</div>
 
 La comparación entre la primera y la tercera fila de la Tabla 4.4 cuantifica el efecto de la estrategia de bajo consumo descrita en la sección 3.4: apagar el LCD y suspender el CPU reduce la corriente a poco más de la mitad respecto del modo activo.
  
@@ -616,7 +639,7 @@ Respecto a los requisitos no implementados:
 
 El prototipo cumple con la mayoría de los requisitos funcionales planteados. La integración del RTC DS3231 con la memoria EEPROM sobre un mismo bus I²C permitió construir un sistema de auditoría persistente, y el aislamiento de la alimentación del servomotor evitó que sus picos de consumo perturbaran el ADC del microcontrolador.
 
-El aprendizaje más relevante del trabajo no estuvo en la funcionalidad sino en el **tiempo real**. La primera versión del firmware funcionaba correctamente desde el punto de vista del usuario, pero violaba sistemáticamente el presupuesto temporal: el `HAL_Delay(5)` de la EEPROM bloqueaba el micro cinco veces el período completo del ejecutivo, y la escritura del LCD lo hacía por varios milisegundos más. Que un sistema "ande" no implica que sea determinista. Reescribirlo como Event-Triggered System obligó a atacar cada fuente de bloqueo por separado (framebuffer para el display, cola diferida para la EEPROM, conversión en dos ticks para el ADC, árbitro de token para el bus compartido) y solo entonces el factor de uso se volvió una magnitud medible y acotada.
+El aprendizaje más relevante del trabajo no estuvo en la funcionalidad sino en el *iempo real. La primera versión del firmware funcionaba correctamente desde el punto de vista del usuario, pero violaba sistemáticamente el presupuesto temporal: el `HAL_Delay(5)` de la EEPROM bloqueaba el micro cinco veces el período completo del ejecutivo, y la escritura del LCD lo hacía por varios milisegundos más. Que un sistema "ande" no implica que sea determinista. Reescribirlo como Event-Triggered System obligó a atacar cada fuente de bloqueo por separado (framebuffer para el display, cola diferida para la EEPROM, conversión en dos ticks para el ADC, árbitro de token para el bus compartido) y solo entonces el factor de uso se volvió una magnitud medible y acotada.
 
 ## 5.2 Próximos pasos
 
